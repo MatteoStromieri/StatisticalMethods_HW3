@@ -20,6 +20,12 @@ model predicting Internet using all the other variables. Use the concept of mult
 to explain why adjusted $R^2$ is not dramatically greater than when GDP is the sole predictor.
 Compare the estimated GDP effect in the bivariate model and the multiple regression model and explain why it is so much weaker in the multiple regression model.
 
+```{r, echo=FALSE}
+require(MASS)
+require(car)
+```
+
+
 
 **Solution**
 
@@ -140,21 +146,65 @@ Use AIC to determine which models seem most sensible among the models with (i) i
 
 **Solution**
 
-(a)
+(a) We first load the dataset and perform some light data exploration
 ```{r}
 
-```
+# Loading the dataset
+Crabs <- read.table("http://stat4ds.rwth-aachen.de/data/Crabs.dat", header=TRUE) 
+head(Crabs)
+attach(Crabs)
 
-(b)
+unique(color)
+```
+Given that there're 4 different colors for the `color` feature we fit the following logistic model:
+\[
+    logit(E(Y)) = \beta_0 + \beta_1X_1 + \beta_2X_2 + \beta_3X_3 + \beta_4X_4
+\]
+$X_1$ refers to the `weight` while $X_2,X_3$ and $X_4$ are all dummy variables for the categorical variable `color`.
 ```{r}
-
+# Fitting a logistic model with weight and categorial color
+fit <- glm(y ~  weight + factor(color), family = binomial(link = logit))
+summary(fit)
 ```
 
-(c)
+Using `anova()` function we test for the color effect:
 ```{r}
+anova(fit, test = "Chisq")
+```
+Given that we obtained a rather low drop in the residual deviance when we added the `color` variable, and that the p.value is greater than 0.05, we can suspect that the `color` to be marginally impactful for modelling whether a female horseshoe crab has at least one satellite when paired with the main effect of `weight`.
 
+We can compute the $95\%$ confidence interval for the weight effect using the T-test, remembering that the degrees of freedom for the t student distribution are given by $df = n - p$ (in this case $n = 173$ and $p = 5$, including the intercept) and that we must then compute the exponential for this value since the effect is measured in log(odds).
+```{r}
+ConfInterval <- fit$coefficients[2] + c(-1,1)* summary(fit)$coefficients[2,2] * qt(0.975, df = (173-5))
+exp(ConfInterval)
 ```
 
+(b) For our second model we fit:
+\[
+   \begin{aligned} logit(E(Y)) & = \beta_0 + \beta_1X_1 + \beta_2X_2 + \beta_3X_3 + \beta_4X_4 + \beta_5X_1X_2 + \beta_6X_1X_3 + \beta_7X_1X_4 \\
+    & = \beta_0 + \beta_1X_1 + X_2(\beta_2 + X_1\beta_5) + X_3(\beta_3 + X_1\beta_6) + X_4(\beta_4 + X_1\beta_4)
+    \end{aligned}
+\]
+```{r}
+fit2 <- glm(y ~  weight + factor(color) + weight:factor(color), family = binomial(link = logit))
+summary(fit2)
+```
+Again we can use the `anova()` function to test whether we were able to gain more information on the process
+```{r}
+anova(fit2, test = "Chisq")
+```
+We can again see a rather high p.value and a small drop in the residual deviance, leading us to believe that the additional variables are not needed. This result doesn't surprise us given that this model has an AIC score of $197.66$ and the previous one is, for model checking purposes, identical at $198.54$.
+
+(c) Computing the AIC in the order given by the exercise we see:
+
+```{r}
+scores <- matrix( c(fit2$aic, fit$aic, AIC(glm(y~ weight, family = binomial())),
+                    AIC(glm(y~factor(color), family = binomial())), AIC(glm(y~ 1, family = binomial()))), nrow = 5, ncol = 1, dimnames = list(c("With interaction", "With main effects", "Weight as sole predictor", "Color as sole predictor", "Null model"), c("AIC")))
+
+
+scores
+```
+Given that for the first three models the AIC scores is similar, we can follow Occam's razor theory and choose the model with the least amount of explanatory variables between those: $logit(E(Y)) = \beta_0 + \beta_1X_1$ with $X_1$ being the `weight` with an AIC of 199.7371.
 
 ## Ex 7.26
 
@@ -162,8 +212,28 @@ A headline in The Gainesville Sun (Feb. 17, 2014) proclaimed a worrisome spike i
 
 **Solution**
 ```{r}
+SharksAttacks <- c(33, 29, 29, 12, 17, 21, 31, 28, 19, 14, 11, 26, 23)
+Attacks <- data.frame(SharksAttacks)
 
+# Null poisson model
+NullPo <- glm(SharksAttacks ~ 1, data = Attacks, family = poisson) 
+summary(NullPo)
 ```
+We now compute the mean and the variance for the `SharksAttack` data:
+```{r}
+mean(SharksAttacks)
+```
+```{r}
+var(SharksAttacks)
+```
+
+The values $\overline{y} = 22.53846$ and  $s^2 = 55.76923$ suggest overdispersion (a poisson model implies that $var(Y) = E(Y)= \mu$), therefore we can believe the null poisson model not to be adequate. Now we test a negative binomial null model
+```{r}
+# Null negative binomial model
+NullNegBin <- glm.nb(SharksAttacks ~ 1, link = log, data = Attacks)
+summary(NullNegBin)
+```
+The AIC for the negative binomial is only slightly better being about 5 units lower, the estimated dispersion parameter is $\frac{1}{k} = 1/15.5 \approx 0.064$ but with a standard error of $10.5$ that we can impute to a very small sample size. Since the dispersion parameter is small we can conclude that the negative binomial variance $\mu + \frac{\mu^2}{k}$ is  similar to the poisson variance, therefore there isn't much difference between the two models fit.
 
 
 # DAAG - Chapter 8
