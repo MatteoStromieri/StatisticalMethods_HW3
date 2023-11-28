@@ -173,9 +173,9 @@ anova(fit, test = "Chisq")
 ```
 Given that we obtained a rather low drop in the residual deviance when we added the `color` variable, and that the p.value is greater than 0.05, we can suspect that the `color` to be marginally impactful for modelling whether a female horseshoe crab has at least one satellite when paired with the main effect of `weight`.
 
-We can compute the $95\%$ confidence interval for the weight effect using the T-test, remembering that the degrees of freedom for the t student distribution are given by $df = n - p$ (in this case $n = 173$ and $p = 5$, including the intercept) and that we must then compute the exponential for this value since the effect is measured in log(odds).
+We can compute the $95\%$ confidence interval for the weight effect using Wald test, remembering that we must then compute the exponential for this value since the effect is measured in odds of $E(Y)$.
 ```{r}
-ConfInterval <- fit$coefficients[2] + c(-1,1)* summary(fit)$coefficients[2,2] * qt(0.975, df = (173-5))
+ConfInterval <- fit$coefficients[2] + c(-1,1)* summary(fit)$coefficients[2,2] * qnorm(0.975)
 exp(ConfInterval)
 ```
 
