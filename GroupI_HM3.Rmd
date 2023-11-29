@@ -203,6 +203,7 @@ scores <- matrix( c(fit2$aic, fit$aic, AIC(glm(y~ weight, family = binomial())),
 
 
 scores
+detach(Crabs)
 ```
 Given that for the first three models the AIC scores is similar, we can follow Occam's razor theory and choose the model with the least amount of explanatory variables between those: $logit(E(Y)) = \beta_0 + \beta_1X_1$ with $X_1$ being the `weight` with an AIC of 199.7371.
 
