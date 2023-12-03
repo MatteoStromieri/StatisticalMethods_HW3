@@ -173,17 +173,63 @@ Explain why larger values of $R^2$ yield larger values of $F$.
 
 # FSDS - Chapter 7
 
-## Ex 7.4
+###Ex 7.4 
 
-Analogously to the previous exercise, randomly sample 30 X observations from a uniform in the interval (-4,4) and conditional on $X = x$, 30 normal observations with $E(Y) = 3.5x^3-20x^2+0.5x+20$ and $\sigma = 30$. Fit polynomial normal GLMs of lower and higher order than that of the true relationship. Which model would you suggest? Repeat the same task for $E(Y)=0.5x^3-20x^2+0.5x+20$ (same $\sigma$) several times. What do you observe? Which model would you suggest now?
+Analogously to the previous exercise, randomly sample 30 $X$ observations from a uniform in the interval $(-4,4)$ and conditional on $X = x$, 30 normal observations with $E(Y) = 3.5x^3 − 20x^2 + 0.5x + 20$ and $\sigma = 30$. Fit polynomial normal GLMs of lower and higher order than that of the true relationship. Which model would you suggest? Repeat the same task for $E(Y) = 0.5x^3 − 20x^2 + 0.5x + 20$ (same $\sigma$) several times. What do you observe? Which model would you suggest now?
 
-
-**Solution**
-
-```{r}
-
+```{r, echo=TRUE, eval =TRUE}
+set.seed(123)
+X_obs <- runif(30, -4, 4)
+Y_obs <- 3.5 * X_obs^3 - 20 * X_obs^2 + 0.5 * X_obs + 20 + rnorm(length(X_obs), mean = 0, sd = 30)
 ```
 
+```{r, echo=TRUE, eval =TRUE}
+fit_poly_GLM <- function(X, Y, order) {
+  poly_formula <- as.formula(paste("Y ~ poly(X, ", order, ")", sep = ""))
+  model <- glm(poly_formula, family = gaussian)
+  return(model)
+}
+```
+```{r, echo=TRUE, eval =TRUE}
+model_order2 <- fit_poly_GLM(X_obs, Y_obs, 2)
+model_order4 <- fit_poly_GLM(X_obs, Y_obs, 4)  
+```
+
+```{r, echo=TRUE, eval =TRUE}
+summary(model_order2)
+```
+```{r, echo=TRUE, eval =TRUE}
+summary(model_order4)
+```
+Based on AIC evaluation, the model of higher order would be suggested.
+
+Now on with the second model:
+
+```{r, echo=TRUE, eval =TRUE}
+set.seed(123)
+X_obs_B <- runif(30, -4, 4)
+Y_obs_B <- 3.5 * X_obs_B^3 - 20 * X_obs_B^2 + 0.5 * X_obs_B + 20 + rnorm(length(X_obs_B), mean = 0, sd = 30)
+```
+```{r, echo=TRUE, eval =TRUE}
+fit_poly_GLM_B <- function(X, Y, order) {
+  poly_formula_B <- as.formula(paste("Y ~ poly(X, ", order, ")", sep = ""))
+  model_B <- glm(poly_formula_B, family = gaussian)
+  return(model_B)
+}
+```
+
+```{r, echo=TRUE, eval =TRUE}
+model_order2_B <- fit_poly_GLM_B(X_obs_B, Y_obs_B, 2)  
+model_order4_B <- fit_poly_GLM_B(X_obs_B, Y_obs_B, 4)  
+```
+
+```{r, echo=TRUE, eval =TRUE}
+summary(model_order2_B)
+```
+```{r, echo=TRUE, eval =TRUE}
+summary(model_order4_B)
+```
+Based on AIC comparison, also in this case we would also suggest the second model. 
 
 ## Ex 7.20
 
