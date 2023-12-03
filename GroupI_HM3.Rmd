@@ -2,66 +2,119 @@
 title: "GroupI_HW3"
 author: "Cortinovis, Cvetinovic, Savarin, Stromieri"
 output:
-  pdf_document:
-    toc: yes
   html_document:
+    toc: yes
+  pdf_document:
     toc: yes
 editor_options:
   markdown:
     wrap: 72
 ---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(warn = -1)
+library(car)
+library(knitr)
+library(corrplot)
+library(MASS)
+```
+
 
 # FSDS - Chapter 6
-
-## Ex 6.12
-
+### Ex 6.12
 For the UN data file at the book’s website (see Exercise 1.24), construct a multiple regression
 model predicting Internet using all the other variables. Use the concept of multicollinearity
 to explain why adjusted $R^2$ is not dramatically greater than when GDP is the sole predictor.
-Compare the estimated GDP effect in the bivariate model and the multiple regression model and explain why it is so much weaker in the multiple regression model.
-
-```{r, echo=FALSE}
-require(MASS)
-require(car)
-```
-
-
+Compare the estimated GDP effect in the bivariate model and the multiple regression model
+and explain why it is so much weaker in the multiple regression model.
 
 **Solution**
 
-
-```{r}
-
+Let's start by creating the models, the first includes all the available predictors while, the second one, only the variable GDP:
+```{r block 1}
+UN <- read.table("http://stat4ds.rwth-aachen.de/data/UN.dat",header=T)
+UN$Nation<-NULL
+lm_full <- lm(Internet ~ GDP + HDI + GII + Fertility + CO2 + Homicide + Prison,data=UN)
+lm_GDP <- lm(Internet ~ GDP,data=UN)
+```
+By analysing the output of the ```summary``` function, we get:
+$$
+\bar R^2_{full}=0.8164 \qquad \bar R^2_{GDP}=0.7637 
+$$
+Considering that the *full model* is exploiting five more variables than the other model, these results are pretty strange. We suspect that this low difference is due to the fact that some variables of the full model are not very relevant while others are correlated.
+```{r block 2}
+kable(vif(lm_full))
 ```
 
-## Ex 6.14
+As you can see, the only variable with a $VIF$ greater than $10$ is $HDI$. We continue our analysis by displaying the correlation matrix for all the predictors:
 
-The data set30 Crabs2 at the book’s website comes from a study of factors that affect sperm
-traits of male horseshoe crabs. A response variable, SpermTotal, is the log of the total number
-of sperm in an ejaculate. It has y = 19.3 and s = 2.0. The two explanatory variables used in
-the R output are the horseshoe crab’s carapace width (CW, mean 18.6 cm, standard deviation
-3.0 cm), which is a measure of its size, and color (1 = dark, 2 = medium, 3 = light), which is a
-measure of adult age, darker ones being older.
+```{r block 3,echo=FALSE}
+cor_matrix <- cor(UN)
+cor_plot <- corrplot(cor_matrix, method = "circle")
+```
 
-(a) Using the results shown, write the prediction equation and interpret the parameter estimates.
+Lastly, we analyse the $P$-values of the covariates to spot if some of them are neglegible 
+```{r block 4}
+summary <- summary(lm_full)
+kable(summary$coefficients)
+```
 
-(b) Explain the differences in what is tested with the F statistic (i) for the overall model, (ii)
-for the factor(Color) effect, (iii) for the interaction term. Interpret each.
+We notice that the last four variables have a very strange behaviour. Indeed they have a very low associated $P$-value even though their $\text{VIF}$ is pretty low and they are not directly related to any specific variable: this makes us suspect that we can neglect these predictors.
+
+To test our hypothesis we conduct an $F$-test
+```{r block 5}
+lm_GDP_HDI_GII <- lm(Internet ~ GDP + HDI + GII, data=UN)
+kable(anova(lm_GDP_HDI_GII,lm_full))
+```
+
+$F_{obs}=0.3321437$ is a very high $P$-value, so high that we can reject the alternative hypothesis and not take into account the Fertility, CO2, Homicide and Prison. In fact, the obtained model has $\bar R^2 = 0.8127$.
+
+Regarding the variables $\text{HDI}$ and $\text{GII}$, from the correlation matrix we can see that they are very highly correlated and, therefore, if we run a $t$-test to see if we can neglect $\text{HDI}$ we get a $P$-value of $0.2946$ which is very high, suggesting the removal of this predictor.
+
+In fact, if we consider the model with only the predictors $\text{GDP}$ and $\text{GII}$, we still have $\bar R^2 = 0.8121$. 
+
+To conclude, the last step is the elimination of the predictor $\text{GII}$. Observe that if we print the output of the summary function, it is clear that the best option would be to keep it inside the model, in fact, removing its leds us to the biggest loss in terms of $\bar R^2$, since it reaches the value of $0.7637$.
+```{r block 6}
+lm_GDP_GII <- lm(Internet ~ GDP + GII, data=UN)
+kable(summary(lm_GDP_GII)$coefficients)
+```
+
+To conclude, it's clear that $\beta_{GDP}$ is larger when we are only considering $\text{GDP}$ as predictor because when we consider all the predictors (or just $\text{GDP}$,$\text{HDI}$ and $\text{GII}$) its value is split among itself, $\text{HDI}$ and $\text{GII}$, since they are highly correlated.  
+
+### Ex 6.14
+
+The dataset30 Crabs2 at the book’s website comes from a study of factors that affect sperm traits of male horseshoe crabs. A response variable, SpermTotal, is the log of the total number of sperm in an ejaculate. It has y = 19.3 and s = 2.0. The two explanatory variables used in the R output are the horseshoe crab’s carapace width (CW, mean 18.6 cm, standard deviation 3.0 cm), which is a measure of its size, and color (1 = dark, 2 = medium, 3 = light), which is a measure of adult age, darker ones being older.
+a) Using the results shown, write the prediction equation and interpret the parameter estimates.
+b) Explain the differences in what is tested with the F statistic (i) for the overall model, (ii) for the factor(Color) effect, (iii) for the interaction term. Interpret each.
 
 **Solution**
 
-(a) 
+a) We can write the prediction equation as follows
+$$
+\hat\mu_i=\hat\beta_0+\hat\beta_1CW+\hat\beta_2I_{(Color=2)}+\hat\beta_3I_{(Color=3)}\\=11.366+0.391CW+0.809I_{(Color=2)}+1.149I_{(Color=3)}
+$$
+Regarding the interpretation:
+- $\hat\beta_0$ is the estimated value of the intercept for the base case $Color=1$
+- $\hat\beta_1$ is the common slope of the 3 regression lines that we are considering, when $CW$ increases by 1, then $\hat\mu_i$ increases by $\hat\beta_1$
+- $\hat\beta_2$ and $\hat\beta_3$ are the distances from the base line for $Color=1$ when $Color=2$ and $Color=3$, respectively.  
 
-```{r}
-
+b) In the first case, the overall model versus the *null model*(The one with only the intercept) is tested. Indeed we can get the same $F$-value and $P$-value as follows: 
+```{r block 7}
+Crabs2 <- read.table("http://stat4ds.rwth-aachen.de/data/Crabs2.dat",header=T)
+fit1 <- lm(SpermTotal ~ CW + factor(Color), data=Crabs2)
+fit0 <- lm(SpermTotal ~ 1,data=Crabs2)
+kable(anova(fit0,fit1))
 ```
-
-(b) 
-
-```{r}
-
+In this case, since we obtain a very low $P$-value, we are confident about the model with both the $Color$ and $CW$ variables.
+The third case is simply a test between the model with the interaction term and the model without it:
+```{r block 8}
+fit3 <- lm(SpermTotal ~ CW + factor(Color) + CW:factor(Color), data=Crabs2)
+fit2 <- lm(SpermTotal ~ CW + factor(Color),data=Crabs2)
+kable(anova(fit2,fit3))
 ```
+In this last case we obtain a very low $P$-value, supporting the hypothesis that the interaction term is negligible.
 
+Lastly, the $factor(Color)$ row tests whether the effect $Color$ is relevant or not by comparing it to the model including only the $CW$ predictot. Since the $P$-value is very low, we can conclude that $Color$ is relevant and can not be neglected. 
 
 ## Ex 6.30
 
