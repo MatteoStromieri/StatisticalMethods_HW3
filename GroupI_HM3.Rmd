@@ -17,6 +17,7 @@ library(car)
 library(knitr)
 library(corrplot)
 library(MASS)
+library(DAAG)
 ```
 
 
@@ -290,28 +291,55 @@ summary(NullNegBin)
 The AIC for the negative binomial is only slightly better being about 5 units lower, the estimated dispersion parameter is $\frac{1}{k} = 1/15.5 \approx 0.064$ but with a standard error of $10.5$ that we can impute to a very small sample size. Since the dispersion parameter is small we can conclude that the negative binomial variance $\mu + \frac{\mu^2}{k}$ is  similar to the poisson variance, therefore there isn't much difference between the two models fit.
 
 
-# DAAG - Chapter 8
-
-## Ex 6
-
-As in the previous exercise, the function poissonsim() allows for experimentation with Poisson regression. In particular, poissonsim() can be used to simulate Poisson responses with log-rates equal to $a + bx$, where a and b are fixed values by default.
-
-(a) Simulate 100 Poisson responses using the model $$log\lambda=2-4x$$
-for $x=0,0.01,0.02,...,1.0$. Fit a Poisson regression model to these data, and compare the estimated coefficients with the true coefficients. How well does the estimated model predict future observations?
-
-(b) Simulate 100 Poisson responses using the model $$log\lambda=2-bx$$
-where b is normally distributed with mean 4 and standard deviation 5. [Use the argument slope.sd=5 in the poissonsim() function.] How do the results using the poisson and quasipoisson families differ?
-
-
-
+## DAAG - Chapter 8 
+  
+### Ex 6
+  
+As in the previous exercise, the function poissonsim() allows for experimentation with Poisson regression. In particular, poissonsim() can be used to simulate Poisson responses with log-rates equal to $a + bx$, where $a$ and $b$ are fixed values by default.
+(a) Simulate 100 Poisson responses using the model
+$$log(\lambda)=2−4x$$
+for $x = 0, 0.01, 0.02 ..., 1.0$. Fit a Poisson regression model to these data, and compare the estimated coefficients with the true coefficients. How well does the estimated model predict future observations?
+(b) Simulate 100 Poisson responses using the model
+$$log\lambda=2−bx$$
+where $b$ is normally distributed with mean 4 and standard deviation 5. [Use the argument slope.sd=5 in the poissonsim() function.] How do the results using the poisson and quasipoisson families differ?
+  
 **Solution**
 
 (a)
-```{r}
 
+```{r, echo=TRUE, eval =TRUE}
+set.seed(123)
+x <- seq(0, 1, 0.01)
+true_log_lambda <- 2 - 4 * x
+lambda <- exp(true_log_lambda)
+data_sim <- poissonsim(x, true_log_lambda)
+
+model_sim <- glm(data_sim$y ~ x, family = "poisson")
+summary(model_sim)
+
+estimated_coeffs <- coef(model_sim)
+true_coeffs <- c(intercept = 2, slope = -4)
+
+comparison <- data.frame(estimated_coeffs, true_coeffs)
+print(comparison)
 ```
+The intercept value is correctly estimated, while the other is not. 
 
 (b)
-```{r}
+```{r, echo=TRUE, eval =TRUE}
+set.seed(123) 
+x_values <- seq(0, 1, by = 0.01)
+b_values <- rnorm(length(x_values), mean = 4, sd = 5)
+true_log_lambda <- 2 - b_values * x_values
 
+simulated_data_poisson <- poissonsim(x_values, true_log_lambda, slope.sd = 5)
+
+model_poisson <- glm(simulated_data_poisson$y ~ x_values, family = "poisson")
+model_quasipoisson <- glm(simulated_data_poisson$y ~ x_values, family = "quasipoisson")
+
+summary(model_poisson)
 ```
+```{r, echo=TRUE, eval =TRUE}
+summary(model_quasipoisson)
+```
+The significance of parameters in the first model (Poisson) is much higher, suggesting a better fit of the model. 
