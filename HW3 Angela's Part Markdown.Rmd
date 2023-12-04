@@ -1,0 +1,148 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+### 6.30  
+When the values of y are multiplied by a constant c, from their formulas, show that sy and βˆ1 in the bivariate linear model are also then multiplied by c. Thus, show that r = βˆ1(sx/sy) does not depend on the units of measurement. 
+
+
+Consider the bivariate linear model:
+
+---
+title: "Multiplicative Property in Bivariate Linear Model"
+output: html_document
+---
+
+## Introduction
+
+Consider the bivariate linear model:
+
+\[ y_i = \beta_0 + \beta_1x_i + \varepsilon_i \]
+
+where \( y_i \) is the dependent variable, \( x_i \) is the independent variable, \( \beta_0 \) is the intercept, \( \beta_1 \) is the slope coefficient, and \( \varepsilon_i \) is the error term.
+
+The formulas for \( \beta_1 \) (the slope coefficient), \( s_y \) (standard deviation of \( y \)), and \( s_x \) (standard deviation of \( x \)) are as follows:
+
+\[ \beta_1 = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^{n}(x_i - \bar{x})^2} \]
+
+\[ s_y = \sqrt{\frac{\sum_{i=1}^{n}(y_i - \bar{y})^2}{n-1}} \]
+
+\[ s_x = \sqrt{\frac{\sum_{i=1}^{n}(x_i - \bar{x})^2}{n-1}} \]
+
+
+
+Now, let's consider multiplying the values of \( y \) by a constant \( c \). The new dependent variable, let's call it \( y_c \), is given by:
+
+\[ y_c = cy \]
+
+Now, let's consider the new standard deviation \( s_{y_c} \) of \( y_c \):
+
+\[ s_{y_c} = \sqrt{\frac{\sum_{i=1}^{n}(cy_i - \bar{cy_i})^2}{n-1}} \]
+
+
+Since \( c \) is a constant, it can be factored out:
+
+\[ s_{y_c} = c \sqrt{\frac{\sum_{i=1}^{n}(y_i - \bar{y_i})^2}{n-1}} \]
+
+
+Now, let's consider the formula for \( \beta_1 \) in the new model with \( y_c \):
+
+\[ \beta_1c = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(cy_i - \bar{cy})}{\sum_{i=1}^{n}(x_i - \bar{x})^2} \]
+
+
+Again, factoring out \( c \) from the numerator, resulting in \( \beta_{1_c} = c \cdot \beta_1 \).
+
+\[ \beta_1c = c \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^{n}(x_i - \bar{x})^2} \]
+
+
+Now, let's consider the correlation coefficient \( r \):
+
+\[ r = \frac{\text{cov}(x, y)}{s_x \cdot s_y} \]
+
+where \( \text{cov}(x, y) \) is the covariance between \( x \) and \( y \). If we multiply \( y \) by a constant \( c \), the covariance remains the same, but \( s_y \) is multiplied by \( c \). Therefore, the \( c \) in \( s_y \) cancels out with the \( c \) in the numerator, and \( r \) remains unchanged. Thus, \( r = \beta_1 \cdot \frac{s_x}{s_y} \) does not depend on the units of measurement.
+
+
+#### 6.42 
+#### (a) Simulate Data and Fit Quadratic Model
+
+```{r setup, echo=FALSE}
+# Load necessary libraries
+library(ggplot2)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Simulate 100 independent observations
+n <- 100
+x <- runif(n, 0, 10)
+epsilon <- rnorm(n, 0, 1)
+y_true <- 40.0 - 5.0 * x + 0.5 * x^2 + epsilon
+
+# Create a data frame
+data <- data.frame(x = x, y = y_true)
+
+# Fit quadratic model
+quadratic_model <- lm(y ~ poly(x, degree = 2), data = data)
+
+# Generate fitted values
+y_fitted <- predict(quadratic_model, newdata = data)
+```
+
+```{r plot, echo=FALSE, fig.cap="Scatterplot and Quadratic Fit"}
+# Plot the data and fitted quadratic model
+ggplot(data, aes(x, y)) +
+  geom_point() +
+  geom_line(aes(y = y_fitted), color = "red") +
+  labs(title = "Scatterplot and Quadratic Fit",
+       x = "X", y = "Y")
+```
+
+#### (b) Compare Fitted Equation with True Relationship
+
+The true relationship is given by \(Y = 40.0 - 5.0x + 0.5x^2 + \varepsilon\). Let's compare the fitted equation with the true relationship:
+
+```{r compare_equations, echo=FALSE}
+# True coefficients
+beta0_true <- 40.0
+beta1_true <- -5.0
+beta2_true <- 0.5
+
+# Fitted coefficients
+beta0_fitted <- coef(quadratic_model)[1]
+beta1_fitted <- coef(quadratic_model)[2]
+beta2_fitted <- coef(quadratic_model)[3]
+
+# Display coefficients
+cat("True Equation: Y =", beta0_true, "-", abs(beta1_true), "x", "+", beta2_true, "x^2 + ε\n")
+cat("Fitted Equation: Y =", round(beta0_fitted, 2), "+", round(beta1_fitted, 2), "x", "+", round(beta2_fitted, 2), "x^2 + ε\n")
+```
+
+### Task 2: Correlation and R-squared Analysis
+
+#### (a) Find the Correlation between x and y
+
+```{r correlation, echo=FALSE}
+# Calculate correlation between x and y
+correlation_coefficient <- cor(data$x, data$y)
+
+# Display correlation coefficient
+cat("Correlation between x and y:", round(correlation_coefficient, 2), "\n")
+```
+
+#### (b) Explain Weak Correlation despite a Strong Relationship
+
+The correlation between \(x\) and \(y\) might be weak despite a strong relationship observed in the plot because correlation measures linear relationships. In the case of a quadratic relationship, the correlation coefficient may not adequately capture the curved nature of the relationship. The correlation coefficient is a measure of linear association, and in a quadratic model, the relationship is nonlinear.
+
+Additionally, the R-squared value for the quadratic model may be high, indicating that the model explains a large proportion of the variance in \(y\), even though the linear correlation is weak.
+
+```{r r_squared, echo=FALSE}
+# Calculate R-squared value for the quadratic model
+r_squared <- summary(quadratic_model)$r.squared
+
+# Display R-squared value
+cat("R-squared value for the quadratic model:", round(r_squared, 2), "\n")
+```
+
+In conclusion, while the correlation between \(x\) and \(y\) may be weak, the quadratic model provides a good fit to the data, as indicated by the high R-squared value.
