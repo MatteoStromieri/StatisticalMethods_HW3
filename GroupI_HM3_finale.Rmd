@@ -1,0 +1,554 @@
+---
+title: "GroupI_HW3"
+author: "Cortinovis, Cvetinovic, Savarin, Stromieri"
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+editor_options:
+  markdown:
+    wrap: 72
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(warn = -1)
+library(car)
+library(knitr)
+library(corrplot)
+library(MASS)
+library(DAAG)
+```
+
+
+# FSDS - Chapter 6
+### Ex 6.12
+For the UN data file at the book’s website (see Exercise 1.24), construct a multiple regression
+model predicting Internet using all the other variables. Use the concept of multicollinearity
+to explain why adjusted $R^2$ is not dramatically greater than when GDP is the sole predictor.
+Compare the estimated GDP effect in the bivariate model and the multiple regression model
+and explain why it is so much weaker in the multiple regression model.
+
+**Solution**
+
+Let's start by creating the models, the first includes all the available predictors while, the second one, only the variable GDP:
+```{r block 1}
+UN <- read.table("http://stat4ds.rwth-aachen.de/data/UN.dat",header=T)
+UN$Nation<-NULL
+lm_full <- lm(Internet ~ GDP + HDI + GII + Fertility + CO2 + Homicide + Prison,data=UN)
+lm_GDP <- lm(Internet ~ GDP,data=UN)
+```
+By analysing the output of the ```summary``` function, we get:
+$$
+\bar R^2_{full}=0.8164 \qquad \bar R^2_{GDP}=0.7637 
+$$
+Considering that the *full model* is exploiting five more variables than the other model, these results are pretty strange. We suspect that this low difference is due to the fact that some variables of the full model are not very relevant while others are correlated.
+```{r block 2}
+kable(vif(lm_full))
+```
+
+As you can see, the only variable with a $VIF$ greater than $10$ is $HDI$. We continue our analysis by displaying the correlation matrix for all the predictors:
+
+```{r block 3,echo=FALSE}
+cor_matrix <- cor(UN)
+cor_plot <- corrplot(cor_matrix, method = "circle")
+```
+
+Lastly, we analyse the $P$-values of the covariates to spot if some of them are neglegible 
+```{r block 4}
+summary <- summary(lm_full)
+kable(summary$coefficients)
+```
+
+We notice that the last four variables have a very strange behaviour. Indeed they have a very low associated $P$-value even though their $\text{VIF}$ is pretty low and they are not directly related to any specific variable: this makes us suspect that we can neglect these predictors.
+
+To test our hypothesis we conduct an $F$-test
+```{r block 5}
+lm_GDP_HDI_GII <- lm(Internet ~ GDP + HDI + GII, data=UN)
+kable(anova(lm_GDP_HDI_GII,lm_full))
+```
+
+$F_{obs}=0.3321437$ is a very high $P$-value, so high that we can reject the alternative hypothesis and not take into account the Fertility, CO2, Homicide and Prison. In fact, the obtained model has $\bar R^2 = 0.8127$.
+
+Regarding the variables $\text{HDI}$ and $\text{GII}$, from the correlation matrix we can see that they are very highly correlated and, therefore, if we run a $t$-test to see if we can neglect $\text{HDI}$ we get a $P$-value of $0.2946$ which is very high, suggesting the removal of this predictor.
+
+In fact, if we consider the model with only the predictors $\text{GDP}$ and $\text{GII}$, we still have $\bar R^2 = 0.8121$. 
+
+To conclude, the last step is the elimination of the predictor $\text{GII}$. Observe that if we print the output of the summary function, it is clear that the best option would be to keep it inside the model, in fact, removing its leds us to the biggest loss in terms of $\bar R^2$, since it reaches the value of $0.7637$.
+```{r block 6}
+lm_GDP_GII <- lm(Internet ~ GDP + GII, data=UN)
+kable(summary(lm_GDP_GII)$coefficients)
+```
+
+To conclude, it's clear that $\beta_{GDP}$ is larger when we are only considering $\text{GDP}$ as predictor because when we consider all the predictors (or just $\text{GDP}$,$\text{HDI}$ and $\text{GII}$) its value is split among itself, $\text{HDI}$ and $\text{GII}$, since they are highly correlated.  
+
+### Ex 6.14
+
+The dataset30 Crabs2 at the book’s website comes from a study of factors that affect sperm traits of male horseshoe crabs. A response variable, SpermTotal, is the log of the total number of sperm in an ejaculate. It has y = 19.3 and s = 2.0. The two explanatory variables used in the R output are the horseshoe crab’s carapace width (CW, mean 18.6 cm, standard deviation 3.0 cm), which is a measure of its size, and color (1 = dark, 2 = medium, 3 = light), which is a measure of adult age, darker ones being older.
+a) Using the results shown, write the prediction equation and interpret the parameter estimates.
+b) Explain the differences in what is tested with the F statistic (i) for the overall model, (ii) for the factor(Color) effect, (iii) for the interaction term. Interpret each.
+
+**Solution**
+
+a) We can write the prediction equation as follows
+$$
+\hat\mu_i=\hat\beta_0+\hat\beta_1CW+\hat\beta_2I_{(Color=2)}+\hat\beta_3I_{(Color=3)}\\=11.366+0.391CW+0.809I_{(Color=2)}+1.149I_{(Color=3)}
+$$
+Regarding the interpretation:
+- $\hat\beta_0$ is the estimated value of the intercept for the base case $Color=1$
+- $\hat\beta_1$ is the common slope of the 3 regression lines that we are considering, when $CW$ increases by 1, then $\hat\mu_i$ increases by $\hat\beta_1$
+- $\hat\beta_2$ and $\hat\beta_3$ are the distances from the base line for $Color=1$ when $Color=2$ and $Color=3$, respectively.  
+
+b) In the first case, the overall model versus the *null model*(The one with only the intercept) is tested. Indeed we can get the same $F$-value and $P$-value as follows: 
+```{r block 7}
+Crabs2 <- read.table("http://stat4ds.rwth-aachen.de/data/Crabs2.dat",header=T)
+fit1 <- lm(SpermTotal ~ CW + factor(Color), data=Crabs2)
+fit0 <- lm(SpermTotal ~ 1,data=Crabs2)
+kable(anova(fit0,fit1))
+```
+In this case, since we obtain a very low $P$-value, we are confident about the model with both the $Color$ and $CW$ variables.
+The third case is simply a test between the model with the interaction term and the model without it:
+```{r block 8}
+fit3 <- lm(SpermTotal ~ CW + factor(Color) + CW:factor(Color), data=Crabs2)
+fit2 <- lm(SpermTotal ~ CW + factor(Color),data=Crabs2)
+kable(anova(fit2,fit3))
+```
+In this last case we obtain a very low $P$-value, supporting the hypothesis that the interaction term is negligible.
+
+Lastly, the $factor(Color)$ row tests whether the effect $Color$ is relevant or not by comparing it to the model including only the $CW$ predictot. Since the $P$-value is very low, we can conclude that $Color$ is relevant and can not be neglected. 
+
+## Ex 6.30
+
+When the values of $y$ are multiplied by a constant $c$, from their formulas, show that $s_y$ and $\hat{\beta_1}$ in the bivariate linear model are also then multiplied by $c$. Thus, show that $r = \hat{\beta}_1(s_x/s_y)$ does not depend on the units of measurement.
+
+**Solution**
+
+When the values of y are multiplied by a constant c, from their formulas, show that sy and βˆ1 in the bivariate linear model are also then multiplied by c. Thus, show that r = βˆ1(sx/sy) does not depend on the units of measurement. 
+
+
+Consider the bivariate linear model:
+
+---
+title: "Multiplicative Property in Bivariate Linear Model"
+output: html_document
+---
+
+## Introduction
+
+Consider the bivariate linear model:
+
+\[ y_i = \beta_0 + \beta_1x_i + \varepsilon_i \]
+
+where \( y_i \) is the dependent variable, \( x_i \) is the independent variable, \( \beta_0 \) is the intercept, \( \beta_1 \) is the slope coefficient, and \( \varepsilon_i \) is the error term.
+
+The formulas for \( \beta_1 \) (the slope coefficient), \( s_y \) (standard deviation of \( y \)), and \( s_x \) (standard deviation of \( x \)) are as follows:
+
+\[ \beta_1 = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^{n}(x_i - \bar{x})^2} \]
+
+\[ s_y = \sqrt{\frac{\sum_{i=1}^{n}(y_i - \bar{y})^2}{n-1}} \]
+
+\[ s_x = \sqrt{\frac{\sum_{i=1}^{n}(x_i - \bar{x})^2}{n-1}} \]
+
+
+
+Now, let's consider multiplying the values of \( y \) by a constant \( c \). The new dependent variable, let's call it \( y_c \), is given by:
+
+\[ y_c = cy \]
+
+Now, let's consider the new standard deviation \( s_{y_c} \) of \( y_c \):
+
+\[ s_{y_c} = \sqrt{\frac{\sum_{i=1}^{n}(cy_i - \bar{cy_i})^2}{n-1}} \]
+
+
+Since \( c \) is a constant, it can be factored out:
+
+\[ s_{y_c} = c \sqrt{\frac{\sum_{i=1}^{n}(y_i - \bar{y_i})^2}{n-1}} \]
+
+
+Now, let's consider the formula for \( \beta_1 \) in the new model with \( y_c \):
+
+\[ \beta_1c = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(cy_i - \bar{cy})}{\sum_{i=1}^{n}(x_i - \bar{x})^2} \]
+
+
+Again, factoring out \( c \) from the numerator, resulting in \( \beta_{1_c} = c \cdot \beta_1 \).
+
+\[ \beta_1c = c \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^{n}(x_i - \bar{x})^2} \]
+
+
+Now, let's consider the correlation coefficient \( r \):
+
+\[ r = \frac{\text{cov}(x, y)}{s_x \cdot s_y} \]
+
+where \( \text{cov}(x, y) \) is the covariance between \( x \) and \( y \). If we multiply \( y \) by a constant \( c \), the covariance remains the same, but \( s_y \) is multiplied by \( c \). Therefore, the \( c \) in \( s_y \) cancels out with the \( c \) in the numerator, and \( r \) remains unchanged. Thus, \( r = \beta_1 \cdot \frac{s_x}{s_y} \) does not depend on the units of measurement.
+
+## Ex 6.42
+
+You can fit the quadratic equation $E(Y) = \beta_0+\beta_11x+\beta_2x^2$ by fitting a multiple regression model with $x1 = x$ and $x2 = x^2$.
+
+(a) Simulate 100 independent observations from the model $Y = 40.0-5.0x+0.5x^2+\epsilon$, where $X$ has a uniform distribution over $[0, 10]$ and $\epsilon \sim N(0, 1)$. Plot the data and fit the quadratic model. Report how the fitted equation compares with the true relationship.
+
+(b) Find the correlation between x and y and explain why it is so weak even though the plot shows a strong relationship with a large $R^2$ value for the quadratic model.
+
+**Solution**
+
+#### (a) Simulate Data and Fit Quadratic Model
+
+```{r setup2, echo=FALSE}
+# Load necessary libraries
+library(ggplot2)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Simulate 100 independent observations
+n <- 100
+x <- runif(n, 0, 10)
+epsilon <- rnorm(n, 0, 1)
+y_true <- 40.0 - 5.0 * x + 0.5 * x^2 + epsilon
+
+# Create a data frame
+data <- data.frame(x = x, y = y_true)
+
+# Fit quadratic model
+quadratic_model <- lm(y ~ poly(x, degree = 2), data = data)
+
+# Generate fitted values
+y_fitted <- predict(quadratic_model, newdata = data)
+```
+
+```{r plot, echo=FALSE, fig.cap="Scatterplot and Quadratic Fit"}
+# Plot the data and fitted quadratic model
+ggplot(data, aes(x, y)) +
+  geom_point() +
+  geom_line(aes(y = y_fitted), color = "red") +
+  labs(title = "Scatterplot and Quadratic Fit",
+       x = "X", y = "Y")
+```
+
+#### (b) Compare Fitted Equation with True Relationship
+
+The true relationship is given by \(Y = 40.0 - 5.0x + 0.5x^2 + \varepsilon\). Let's compare the fitted equation with the true relationship:
+
+```{r compare_equations, echo=FALSE}
+# True coefficients
+beta0_true <- 40.0
+beta1_true <- -5.0
+beta2_true <- 0.5
+
+# Fitted coefficients
+beta0_fitted <- coef(quadratic_model)[1]
+beta1_fitted <- coef(quadratic_model)[2]
+beta2_fitted <- coef(quadratic_model)[3]
+
+# Display coefficients
+cat("True Equation: Y =", beta0_true, "-", abs(beta1_true), "x", "+", beta2_true, "x^2 + ε\n")
+cat("Fitted Equation: Y =", round(beta0_fitted, 2), "+", round(beta1_fitted, 2), "x", "+", round(beta2_fitted, 2), "x^2 + ε\n")
+```
+
+### Task 2: Correlation and R-squared Analysis
+
+#### (a) Find the Correlation between x and y
+
+```{r correlation, echo=FALSE}
+# Calculate correlation between x and y
+correlation_coefficient <- cor(data$x, data$y)
+
+# Display correlation coefficient
+cat("Correlation between x and y:", round(correlation_coefficient, 2), "\n")
+```
+
+#### (b) Explain Weak Correlation despite a Strong Relationship
+
+The correlation between \(x\) and \(y\) might be weak despite a strong relationship observed in the plot because correlation measures linear relationships. In the case of a quadratic relationship, the correlation coefficient may not adequately capture the curved nature of the relationship. The correlation coefficient is a measure of linear association, and in a quadratic model, the relationship is nonlinear.
+
+Additionally, the R-squared value for the quadratic model may be high, indicating that the model explains a large proportion of the variance in \(y\), even though the linear correlation is weak.
+
+```{r r_squared, echo=FALSE}
+# Calculate R-squared value for the quadratic model
+r_squared <- summary(quadratic_model)$r.squared
+
+# Display R-squared value
+cat("R-squared value for the quadratic model:", round(r_squared, 2), "\n")
+```
+
+In conclusion, while the correlation between \(x\) and \(y\) may be weak, the quadratic model provides a good fit to the data, as indicated by the high R-squared value.
+
+
+
+## Ex 6.52
+
+$F$ statistics have alternate expressions in terms of $R^2$ values.
+
+1.  Show that for testing $H_0 : \beta_0 = \dots = \beta_p = 0$,
+    \begin{equation*}
+        F = \frac{(TSS - SSE)/p}{SSE / (n - (p+1))} \text{ is equivalently } \frac{R^2 / p}{(1-R^2)/(n-(p+1))}
+    \end{equation*}
+    Explain why larger values of $R^2$ yield larger values of $F$.
+    
+2.  Show that for comparing nested linear models,
+    \begin{equation*}
+      F = \frac{(SSE_0 - SSE_1)/(p_1 - p_0)}{SSE_1 / (n - (p_1 + 1))} = \frac{(R^2_1 - R^2_0)/(p_1 - p_0)}{(1-R^2_1)(n-(p_1 + 1))}
+    \end{equation*}
+    
+##Solution
+
+a)
+$$H_0: \beta_1 = \beta_2 = \dots = \beta_p = 0$$
+
+$$TSS-SSE=R^2*TSS$$
+
+$$SSE=(1-R^2)TSS$$
+
+$$R^2=SSR/TSS=(TSS-SSE)/TSS$$
+
+
+$$1-R^2=SSE/TSS$$
+
+
+\begin{align*}
+      F = \frac{(TSS-SEE)/(p)}{SSE / (n-p-1))} 
+      \\
+      &= \frac{(R^2*TSS)/(p)}{((1-R^2)*TSS) / (n-p-1))}
+      \\
+      &= \frac{(R^2)/(p)}{(1-R^2)/(n-p-1))}
+    \end{align*}
+
+
+Assuming $n > p > 0$, $F : [0,1) \to [0, \infty)$ is a strictly increasing function of $R^2$,
+since its derivative $\frac{dF}{dR^2} = \frac{n-p-1}{p} \frac{1}{(1-R^2)^2}$ is strictly positive on $[0,1)$.
+\
+$R^2$ is a goodness-of-fit indicator and the larger $R^2$, the more the model explains the variability of the data, and therefore the higher the score the $F$ statistic assigns to the model. Therefore, the stronger is the evidence against the null hypothesis. 
+
+(b)
+
+$$SSE_0=(1-R^2_0)TSS$$
+
+$$SSE_1=(1-R^2_1)TSS$$
+
+\begin{align*}
+      &  \frac{(SSE_0-SSE_1)/(p_1-p_0)}{SSE_1 / (n-p_1))} 
+      \\
+      & \frac{[((1-R^2_0)*TSS)- ((1-R^2_1)*TSS)/(p_1-p_0)}{((1-R^2_1)*TSS) / (n-p_1))}
+      \\
+      & \frac{((R^2_1)-(R^2_0)/(p_1-p_0)}{(1-R^2_1)/(n-p_1))}
+    \end{align*}
+
+
+# FSDS - Chapter 7
+
+### Ex 7.4 
+
+Analogously to the previous exercise, randomly sample 30 $X$ observations from a uniform in the interval $(-4,4)$ and conditional on $X = x$, 30 normal observations with $E(Y) = 3.5x^3 − 20x^2 + 0.5x + 20$ and $\sigma = 30$. Fit polynomial normal GLMs of lower and higher order than that of the true relationship. Which model would you suggest? Repeat the same task for $E(Y) = 0.5x^3 − 20x^2 + 0.5x + 20$ (same $\sigma$) several times. What do you observe? Which model would you suggest now?
+
+```{r, echo=TRUE, eval =TRUE}
+set.seed(123)
+X_obs <- runif(30, -4, 4)
+Y_obs <- 3.5 * X_obs^3 - 20 * X_obs^2 + 0.5 * X_obs + 20 + rnorm(length(X_obs), mean = 0, sd = 30)
+```
+
+```{r, echo=TRUE, eval =TRUE}
+fit_poly_GLM <- function(X, Y, order) {
+  poly_formula <- as.formula(paste("Y ~ poly(X, ", order, ")", sep = ""))
+  model <- glm(poly_formula, family = gaussian)
+  return(model)
+}
+```
+```{r, echo=TRUE, eval =TRUE}
+model_order2 <- fit_poly_GLM(X_obs, Y_obs, 2)
+model_order4 <- fit_poly_GLM(X_obs, Y_obs, 4)  
+```
+
+```{r, echo=TRUE, eval =TRUE}
+summary(model_order2)
+```
+```{r, echo=TRUE, eval =TRUE}
+summary(model_order4)
+```
+Based on AIC evaluation, the model of higher order would be suggested.
+
+Now on with the second model:
+
+```{r, echo=TRUE, eval =TRUE}
+set.seed(123)
+X_obs_B <- runif(30, -4, 4)
+Y_obs_B <- 3.5 * X_obs_B^3 - 20 * X_obs_B^2 + 0.5 * X_obs_B + 20 + rnorm(length(X_obs_B), mean = 0, sd = 30)
+```
+```{r, echo=TRUE, eval =TRUE}
+fit_poly_GLM_B <- function(X, Y, order) {
+  poly_formula_B <- as.formula(paste("Y ~ poly(X, ", order, ")", sep = ""))
+  model_B <- glm(poly_formula_B, family = gaussian)
+  return(model_B)
+}
+```
+
+```{r, echo=TRUE, eval =TRUE}
+model_order2_B <- fit_poly_GLM_B(X_obs_B, Y_obs_B, 2)  
+model_order4_B <- fit_poly_GLM_B(X_obs_B, Y_obs_B, 4)  
+```
+
+```{r, echo=TRUE, eval =TRUE}
+summary(model_order2_B)
+```
+```{r, echo=TRUE, eval =TRUE}
+summary(model_order4_B)
+```
+Based on AIC comparison, also in this case we would also suggest the second model. 
+
+## Ex 7.20
+
+In the Crabs data file introduced in Section 7.4.2, the variable y indicates whether a female horseshoe crab has at least one satellite (1 = yes, 0 = no).
+
+(a)
+Fit a main-effects logistic model using weight and categorical color as explanatory variables. Conduct a significance test for the color effect, and construct a 95% confidence interval for the weight effect.
+
+(b)
+Fit the model that permits interaction between color as a factor and weight in their effects, showing the estimated effect of weight for each color. Test whether this model provides a significantly better fit.
+
+(c) 
+Use AIC to determine which models seem most sensible among the models with (i) interaction, (ii) main effects, (iii) weight as the sole predictor, (iv) color as the sole predictor, and (v) the null model.
+
+**Solution**
+
+(a) We first load the dataset and perform some light data exploration
+```{r}
+
+# Loading the dataset
+Crabs <- read.table("http://stat4ds.rwth-aachen.de/data/Crabs.dat", header=TRUE) 
+head(Crabs)
+attach(Crabs)
+
+unique(color)
+```
+Given that there're 4 different colors for the `color` feature we fit the following logistic model:
+\[
+    logit(E(Y)) = \beta_0 + \beta_1X_1 + \beta_2X_2 + \beta_3X_3 + \beta_4X_4
+\]
+$X_1$ refers to the `weight` while $X_2,X_3$ and $X_4$ are all dummy variables for the categorical variable `color`.
+```{r}
+# Fitting a logistic model with weight and categorial color
+fit <- glm(y ~  weight + factor(color), family = binomial(link = logit))
+summary(fit)
+```
+
+Using `anova()` function we test for the color effect:
+```{r}
+anova(fit, test = "Chisq")
+```
+Given that we obtained a rather low drop in the residual deviance when we added the `color` variable, and that the p.value is greater than 0.05, we can suspect that the `color` to be marginally impactful for modelling whether a female horseshoe crab has at least one satellite when paired with the main effect of `weight`.
+
+We can compute the $95\%$ confidence interval for the weight effect using Wald test, remembering that we must then compute the exponential for this value since the effect is measured in odds of $E(Y)$.
+```{r}
+ConfInterval <- fit$coefficients[2] + c(-1,1)* summary(fit)$coefficients[2,2] * qnorm(0.975)
+exp(ConfInterval)
+```
+
+(b) For our second model we fit:
+\[
+   \begin{aligned} logit(E(Y)) & = \beta_0 + \beta_1X_1 + \beta_2X_2 + \beta_3X_3 + \beta_4X_4 + \beta_5X_1X_2 + \beta_6X_1X_3 + \beta_7X_1X_4 \\
+    & = \beta_0 + \beta_1X_1 + X_2(\beta_2 + X_1\beta_5) + X_3(\beta_3 + X_1\beta_6) + X_4(\beta_4 + X_1\beta_4)
+    \end{aligned}
+\]
+```{r}
+fit2 <- glm(y ~  weight + factor(color) + weight:factor(color), family = binomial(link = logit))
+summary(fit2)
+```
+Again we can use the `anova()` function to test whether we were able to gain more information on the process
+```{r}
+anova(fit2, test = "Chisq")
+```
+We can again see a rather high p.value and a small drop in the residual deviance, leading us to believe that the additional variables are not needed. This result doesn't surprise us given that this model has an AIC score of $197.66$ and the previous one is, for model checking purposes, identical at $198.54$.
+
+(c) Computing the AIC in the order given by the exercise we see:
+
+```{r}
+scores <- matrix( c(fit2$aic, fit$aic, AIC(glm(y~ weight, family = binomial())),
+                    AIC(glm(y~factor(color), family = binomial())), AIC(glm(y~ 1, family = binomial()))), nrow = 5, ncol = 1, dimnames = list(c("With interaction", "With main effects", "Weight as sole predictor", "Color as sole predictor", "Null model"), c("AIC")))
+
+
+scores
+detach(Crabs)
+```
+Given that for the first three models the AIC scores is similar, we can follow Occam's razor theory and choose the model with the least amount of explanatory variables between those: $logit(E(Y)) = \beta_0 + \beta_1X_1$ with $X_1$ being the `weight` with an AIC of 199.7371.
+
+## Ex 7.26
+
+A headline in The Gainesville Sun (Feb. 17, 2014) proclaimed a worrisome spike in shark attacks in the previous two years. The reported total number of shark attacks in Florida per year from 2001 to 2013 were 33, 29, 29, 12, 17, 21, 31, 28, 19, 14, 11, 26, 23. Are these counts consistent with a null Poisson model? Explain, and compare aspects of the Poisson model and negative binomial model fits.
+
+**Solution**
+```{r}
+SharksAttacks <- c(33, 29, 29, 12, 17, 21, 31, 28, 19, 14, 11, 26, 23)
+Attacks <- data.frame(SharksAttacks)
+
+# Null poisson model
+NullPo <- glm(SharksAttacks ~ 1, data = Attacks, family = poisson) 
+summary(NullPo)
+```
+We now compute the mean and the variance for the `SharksAttack` data:
+```{r}
+mean(SharksAttacks)
+```
+```{r}
+var(SharksAttacks)
+```
+
+The values $\overline{y} = 22.53846$ and  $s^2 = 55.76923$ suggest overdispersion (a poisson model implies that $var(Y) = E(Y)= \mu$), therefore we can believe the null poisson model not to be adequate. Now we test a negative binomial null model
+```{r}
+# Null negative binomial model
+NullNegBin <- glm.nb(SharksAttacks ~ 1, link = log, data = Attacks)
+summary(NullNegBin)
+```
+The AIC for the negative binomial is only slightly better being about 5 units lower, the estimated dispersion parameter is $\frac{1}{k} = 1/15.5 \approx 0.064$ but with a standard error of $10.5$ that we can impute to a very small sample size. Since the dispersion parameter is small we can conclude that the negative binomial variance $\mu + \frac{\mu^2}{k}$ is  similar to the poisson variance, therefore there isn't much difference between the two models fit.
+
+
+## DAAG - Chapter 8 
+  
+### Ex 6
+  
+As in the previous exercise, the function poissonsim() allows for experimentation with Poisson regression. In particular, poissonsim() can be used to simulate Poisson responses with log-rates equal to $a + bx$, where $a$ and $b$ are fixed values by default.
+(a) Simulate 100 Poisson responses using the model
+$$log(\lambda)=2−4x$$
+for $x = 0, 0.01, 0.02 ..., 1.0$. Fit a Poisson regression model to these data, and compare the estimated coefficients with the true coefficients. How well does the estimated model predict future observations?
+(b) Simulate 100 Poisson responses using the model
+$$log\lambda=2−bx$$
+where $b$ is normally distributed with mean 4 and standard deviation 5. [Use the argument slope.sd=5 in the poissonsim() function.] How do the results using the poisson and quasipoisson families differ?
+  
+**Solution**
+
+(a)
+
+```{r, echo=TRUE, eval =TRUE}
+set.seed(123)
+x <- seq(0, 1, 0.01)
+true_log_lambda <- 2 - 4 * x
+lambda <- exp(true_log_lambda)
+data_sim <- poissonsim(x, true_log_lambda)
+
+model_sim <- glm(data_sim$y ~ x, family = "poisson")
+summary(model_sim)
+
+estimated_coeffs <- coef(model_sim)
+true_coeffs <- c(intercept = 2, slope = -4)
+
+comparison <- data.frame(estimated_coeffs, true_coeffs)
+print(comparison)
+```
+The intercept value is correctly estimated, while the other is not. 
+
+(b)
+```{r, echo=TRUE, eval =TRUE}
+set.seed(123) 
+x_values <- seq(0, 1, by = 0.01)
+b_values <- rnorm(length(x_values), mean = 4, sd = 5)
+true_log_lambda <- 2 - b_values * x_values
+
+simulated_data_poisson <- poissonsim(x_values, true_log_lambda, slope.sd = 5)
+
+model_poisson <- glm(simulated_data_poisson$y ~ x_values, family = "poisson")
+model_quasipoisson <- glm(simulated_data_poisson$y ~ x_values, family = "quasipoisson")
+
+summary(model_poisson)
+```
+```{r, echo=TRUE, eval =TRUE}
+summary(model_quasipoisson)
+```
+The significance of parameters in the first model (Poisson) is much higher, suggesting a better fit of the model. 
