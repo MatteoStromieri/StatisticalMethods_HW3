@@ -277,27 +277,62 @@ In conclusion, while the correlation between \(x\) and \(y\) may be weak, the qu
 
 ## Ex 6.52
 
-F statistics have alternate expressions in terms of R2 values.
+$F$ statistics have alternate expressions in terms of $R^2$ values.
 
-(a) Show that for testing $H_o:\beta1 = \dots = \beta_p = 0$, $$F=\frac{(TSS-SSE)/p}{SSE/[n-(p+1)]} = \frac{R^2/p}{(1-R^2)/[n-(p+1)]}.$$
+1.  Show that for testing $H_0 : \beta_0 = \dots = \beta_p = 0$,
+    \begin{equation*}
+        F = \frac{(TSS - SSE)/p}{SSE / (n - (p+1))} \text{ is equivalently } \frac{R^2 / p}{(1-R^2)/(n-(p+1))}
+    \end{equation*}
+    Explain why larger values of $R^2$ yield larger values of $F$.
+    
+2.  Show that for comparing nested linear models,
+    \begin{equation*}
+      F = \frac{(SSE_0 - SSE_1)/(p_1 - p_0)}{SSE_1 / (n - (p_1 + 1))} = \frac{(R^2_1 - R^2_0)/(p_1 - p_0)}{(1-R^2_1)(n-(p_1 + 1))}
+    \end{equation*}
+    
+##Solution
 
-Explain why larger values of $R^2$ yield larger values of $F$.
+a)
+$$H_0: \beta_1 = \beta_2 = \dots = \beta_p = 0$$
 
-(b) Show that for comparing nested linear models, $$F=\frac{(SSE_0-SSE_1)/(p_1-p_0)}{SSE_1/[n-(p_1+1)]} = \frac{(R_1^2-R_0^2)/(p_1-p_0)}{(1-R_1^2)/[n-(p_1+1)]}$$
+$$TSS-SSE=R^2*TSS$$
 
-**Solution**
+$$SSE=(1-R^2)TSS$$
 
-(a)
+$$R^2=SSR/TSS=(TSS-SSE)/TSS$$
 
-```{r}
 
-```
+$$1-R^2=SSE/TSS$$
+
+
+\begin{align*}
+      F = \frac{(TSS-SEE)/(p)}{SSE / (n-p))} 
+      \\
+      &= \frac{(R^2*TSS)/(p)}{((1-R^2)*TSS) / (n-p))}
+      \\
+      &= \frac{(R^2)/(p)}{(1-R^2)/(n-p))}
+    \end{align*}
+
+
+Assuming $n > p > 0$, $F : [0,1) \to [0, \infty)$ is a strictly increasing function of $R^2$,
+since its derivative $\frac{dF}{dR^2} = \frac{n-p-1}{p} \frac{1}{(1-R^2)^2}$ is strictly positive on $[0,1)$.
+\
+$R^2$ is a goodness-of-fit indicator and the larger $R^2$, the more the model explains the variability of the data, and therefore the higher the score the $F$ statistic assigns to the model. Therefore, the stronger is the evidence against the null hypothesis. 
 
 (b)
 
-```{r}
+$$SSE_0=(1-R^2_0)TSS$$
 
-```
+$$SSE_1=(1-R^2_1)TSS$$
+
+\begin{align*}
+      &  \frac{(SSE_0-SSE_1)/(p_1-p_0)}{SSE_1 / (n-p_1))} 
+      \\
+      & \frac{[((1-R^2_0)*TSS)- ((1-R^2_1)*TSS)/(p_1-p_0)}{((1-R^2_1)*TSS) / (n-p_1))}
+      \\
+      & \frac{((R^2_1)-(R^2_0)/(p_1-p_0)}{(1-R^2_1)/(n-p_1))}
+    \end{align*}
+
 
 # FSDS - Chapter 7
 
